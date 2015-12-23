@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">test/spec/test.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+  <script src="script/manual.js"></script>
+</head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  <a href="test.html" data-ice="testLink">Test</a>
+  <a data-ice="repoURL" href="https://github.com/AurelioDeRosa/github-extended.git" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/github-extended.js~Github.html">Github</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">test/spec/test.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">&apos;use strict&apos;;
+
+import Github from &apos;../../src/github-extended&apos;;
+import testUser from &apos;../fixtures/user.json&apos;;
+
+/** @test {Github} */
+describe(&apos;Github&apos;, () =&gt; {
+   let github, repository, testRepositoryName;
+
+   function promisifiedWrite(data) {
+      return new Promise((resolve, reject) =&gt; {
+         data.repository.write(data.branch, data.filename, data.content, data.commitMessage, error =&gt; {
+            if (error) {
+               reject(error);
+            }
+
+            resolve();
+         });
+      });
+   }
+
+   /**
+    * Delete one or more repositories
+    *
+    * @param {string|Array} repository
+    *
+    * @returns {Promise}
+    */
+   function deleteRepository(repository) {
+      if (typeof repository === &apos;string&apos;) {
+         repository = [repository];
+      }
+
+      let repositoriesPromises = repository.map(name =&gt; {
+         return new Promise((resolve, reject) =&gt; {
+            github
+               .getRepo(testUser.username, name)
+               .deleteRepo((error, result) =&gt; {
+                  if (error) {
+                     reject(error);
+                  }
+
+                  resolve(result);
+               });
+         })
+      });
+
+      return Promise.all(repositoriesPromises);
+   }
+
+   before(done =&gt; {
+      github = new Github({
+         username: testUser.username,
+         password: testUser.password,
+         auth: &apos;basic&apos;
+      });
+      let user = github.getUser();
+
+      testRepositoryName = &apos;github-extended-&apos; + Math.floor(Math.random() * 100000);
+      user.createRepo({
+            name: testRepositoryName
+         },
+         error =&gt; {
+            if (error) {
+               throw error;
+            }
+
+            repository = github.getRepo(testUser.username, testRepositoryName);
+            promisifiedWrite({
+               repository: repository,
+               branch: &apos;master&apos;,
+               filename: &apos;README.md&apos;,
+               content: &apos;# GitHub Extended&apos;,
+               commitMessage: &apos;Initial commit&apos;
+            })
+               .then(() =&gt; done());
+         }
+      );
+      repository = github.getRepo(testUser.username, testRepositoryName);
+   });
+
+   after(done =&gt; repository.deleteRepo(() =&gt; done()));
+
+   describe(&apos;search()&apos;, () =&gt; {
+      let branchName = &apos;search&apos;;
+      let files = [
+         &apos;package.json&apos;,
+         &apos;Hello world.md&apos;,
+         &apos;README.md&apos;,
+         &apos;app/index.html&apos;,
+         &apos;app/scripts/main.js&apos;
+      ];
+
+      before(done =&gt; {
+         repository.branch(&apos;master&apos;, branchName, error =&gt; {
+            if (error) {
+               throw error;
+            }
+
+            let promise = Promise.resolve();
+
+            files.forEach(file =&gt; {
+               promise = promise.then(() =&gt; {
+                  return promisifiedWrite({
+                     repository: repository,
+                     branch: branchName,
+                     filename: file,
+                     content: &apos;THIS IS A TEST&apos;,
+                     commitMessage: &apos;Commit message&apos;
+                  });
+               });
+            });
+
+            promise.then(() =&gt; done());
+         });
+      });
+
+      it(&apos;should find matches with the default configuration&apos;, () =&gt; {
+         let search = repository.search(&apos;PAC&apos;, {
+            branch: branchName
+         });
+         let results = search.then(result =&gt; {
+            return result.map(item =&gt; {
+               return {
+                  type: item.type,
+                  path: item.path
+               };
+            });
+         });
+
+         return Promise.all([
+            assert.eventually.isArray(search, &apos;An array is returned&apos;),
+            assert.eventually.lengthOf(search, 1, &apos;One file found&apos;),
+            assert.eventually.sameDeepMembers(
+               results,
+               [{
+                  type: &apos;blob&apos;,
+                  path: &apos;package.json&apos;
+               }],
+               &apos;Correct information returned&apos;
+            )
+         ]);
+      });
+
+      it(&apos;should find matches with the caseSensitive option&apos;, () =&gt; {
+         let search = repository.search(&apos;acka&apos;, {
+            branch: branchName,
+            caseSensitive: true
+         });
+         let results = search.then(result =&gt; {
+            return result.map(item =&gt; {
+               return {
+                  type: item.type,
+                  path: item.path
+               };
+            });
+         });
+
+         return Promise.all([
+            assert.eventually.isArray(search, &apos;An array is returned&apos;),
+            assert.eventually.lengthOf(search, 1, &apos;One file found&apos;),
+            assert.eventually.sameDeepMembers(
+               results,
+               [{
+                  type: &apos;blob&apos;,
+                  path: &apos;package.json&apos;
+               }],
+               &apos;Correct information returned&apos;
+            )
+         ]);
+      });
+
+      it(&apos;should find only files with the excludeFolders option&apos;, () =&gt; {
+         let search = repository.search(&apos;PAC&apos;, {
+            branch: branchName,
+            excludeFolders: true
+         });
+         let results = search.then(result =&gt; {
+            return result.map(item =&gt; {
+               return {
+                  type: item.type,
+                  path: item.path
+               };
+            });
+         });
+
+         return Promise.all([
+            assert.eventually.isArray(search, &apos;An array is returned&apos;),
+            assert.eventually.lengthOf(search, 1, &apos;One file found&apos;),
+            assert.eventually.sameDeepMembers(
+               results,
+               [{
+                  type: &apos;blob&apos;,
+                  path: &apos;package.json&apos;
+               }],
+               &apos;Correct information returned&apos;
+            )
+         ]);
+      });
+
+      it(&apos;should find only folders with the excludeFolders option&apos;, () =&gt; {
+         let search = repository.search(&apos;app&apos;, {
+            branch: branchName,
+            excludeFiles: true
+         });
+         let results = search.then(result =&gt; {
+            return result.map(item =&gt; {
+               return {
+                  type: item.type,
+                  path: item.path
+               };
+            });
+         });
+
+         return Promise.all([
+            assert.eventually.isArray(search, &apos;An array is returned&apos;),
+            assert.eventually.lengthOf(search, 1, &apos;One folder found&apos;),
+            assert.eventually.sameDeepMembers(
+               results,
+               [{
+                  type: &apos;tree&apos;,
+                  path: &apos;app&apos;
+               }],
+               &apos;Correct information returned&apos;
+            )
+         ]);
+      });
+
+      it(&apos;should not find any match with a non-matching string with the default configuration&apos;, () =&gt; {
+         let search = repository.search(&apos;random.unknown&apos;);
+
+         return Promise.all([
+            assert.eventually.isArray(search, &apos;An array is returned&apos;),
+            assert.eventually.lengthOf(search, 0, &apos;Zero files found&apos;)
+         ]);
+      });
+   });
+
+   describe(&apos;mergePullRequest()&apos;, () =&gt; {
+      let branchName = &apos;mergePullRequest&apos;;
+      let branchIndex = 0;
+      let filename = &apos;index.md&apos;;
+      let pullRequest;
+
+      before(done =&gt; {
+         repository.branch(&apos;master&apos;, branchName, error =&gt; {
+            if (error) {
+               throw error;
+            }
+
+            promisifiedWrite({
+               repository: repository,
+               branch: branchName,
+               filename: filename,
+               content: &apos;This is a text&apos;,
+               commitMessage: &apos;Commit&apos;
+            })
+               .then(() =&gt; done());
+         });
+      });
+
+      beforeEach(done =&gt; {
+         branchIndex++;
+         let updatesBranchName = branchName + branchIndex;
+         repository.branch(branchName, updatesBranchName, error =&gt; {
+            if (error) {
+               throw error;
+            }
+
+            promisifiedWrite({
+               repository: repository,
+               branch: updatesBranchName,
+               filename: filename,
+               content: &apos;This is a different text&apos;,
+               commitMessage: &apos;Commit message&apos;
+            })
+               .then(() =&gt; {
+                  repository.createPullRequest({
+                        title: &apos;Pull request&apos;,
+                        body: &apos;Pull request&apos;,
+                        base: branchName,
+                        head: `${testUser.username}:${updatesBranchName}`
+                     },
+                     (error, pullRequestInfo) =&gt; {
+                        if (error) {
+                           throw error;
+                        }
+
+                        pullRequest = pullRequestInfo;
+                        done();
+                     }
+                  );
+               });
+         });
+      });
+
+      it(&apos;should merge a valid pull request with the default merge commit message&apos;, () =&gt; {
+         let merge = repository.mergePullRequest(pullRequest);
+
+         return Promise.all([
+            assert.isFulfilled(merge, &apos;The request is successful&apos;),
+            assert.eventually.isObject(merge, &apos;The information about the merged pull request are returned&apos;),
+            assert.eventually.propertyVal(merge, &apos;merged&apos;, true, &apos;The pull request is merged&apos;)
+         ]);
+      });
+
+      it(&apos;should merge a valid pull request with a custom merge commit message&apos;, () =&gt; {
+         let options = {
+            commitMessage: &apos;Custom message&apos;
+         };
+         let merge = repository.mergePullRequest(pullRequest, options);
+
+         return Promise.all([
+            assert.isFulfilled(merge, &apos;The request is successful&apos;),
+            assert.eventually.isObject(merge, &apos;The information about the merged pull request are returned&apos;),
+            assert.eventually.propertyVal(merge, &apos;merged&apos;, true, &apos;The pull request is merged&apos;)
+         ]);
+      });
+
+      it(&apos;should throw an error for an invalid pull request&apos;, () =&gt; {
+         pullRequest.head.sha += &apos;random-text&apos;;
+         let merge = repository.mergePullRequest(pullRequest);
+
+         return assert.isRejected(merge, &apos;The pull request is not merged&apos;);
+      });
+   });
+
+   describe(&apos;remove()&apos;, () =&gt; {
+      let branchName = &apos;remove&apos;;
+      let files = [
+         &apos;package.json&apos;,
+         &apos;Hello world.md&apos;,
+         &apos;README.md&apos;,
+         &apos;app/index.html&apos;,
+         &apos;app/scripts/main.js&apos;
+      ];
+
+      function promisifiedGetTree(repository, branchName) {
+         return new Promise((resolve, reject) =&gt; {
+            repository.getRef(`heads/${branchName}`, (error, sha) =&gt; {
+               if (error) {
+                  reject(error);
+               }
+
+               repository.getTree(`${sha}?recursive=true`, (error, tree) =&gt; {
+                  if (error) {
+                     reject(error);
+                  }
+
+                  resolve(tree);
+               });
+            });
+         })
+      }
+
+      before(done =&gt; {
+         repository.branch(&apos;master&apos;, branchName, error =&gt; {
+            if (error) {
+               throw error;
+            }
+
+            let promise = Promise.resolve();
+
+            files.forEach(file =&gt; {
+               promise = promise.then(() =&gt; {
+                  return promisifiedWrite({
+                     repository: repository,
+                     branch: branchName,
+                     filename: file,
+                     content: &apos;THIS IS A TEST&apos;,
+                     commitMessage: &apos;Commit message&apos;
+                  });
+               });
+            });
+
+            promise.then(() =&gt; done());
+         });
+      });
+
+      it(&apos;should delete a file&apos;, () =&gt; {
+         let itemsNumber;
+
+         return promisifiedGetTree(repository, branchName)
+            .then(tree =&gt; itemsNumber = tree.length)
+            .then(() =&gt; repository.remove(branchName, &apos;package.json&apos;))
+            .then(() =&gt; promisifiedGetTree(repository, branchName))
+            .then(tree =&gt; {
+               let readContent = new Promise((resolve, reject) =&gt; {
+                  repository.read(branchName, &apos;package.json&apos;, (error, data) =&gt; {
+                     if (error) {
+                        reject(error);
+                     }
+
+                     resolve(data);
+                  });
+               });
+
+               return Promise.all([
+                  assert.strictEqual(tree.length, itemsNumber - 1, &apos;The items count is decreased&apos;),
+                  assert.isRejected(readContent, &apos;The file is not found&apos;)
+               ]);
+            });
+      });
+
+      it(&apos;should delete a folder and all its content&apos;, () =&gt; {
+         let itemsNumber;
+
+         return promisifiedGetTree(repository, branchName)
+            .then(tree =&gt; itemsNumber = tree.length)
+            .then(() =&gt; repository.remove(branchName, &apos;app&apos;))
+            .then(() =&gt; promisifiedGetTree(repository, branchName))
+            .then(tree =&gt; {
+               let readContent = new Promise((resolve, reject) =&gt; {
+                  repository.contents(branchName, &apos;app/&apos;, (error, contents) =&gt; {
+                     if (error) {
+                        reject(error);
+                     }
+
+                     resolve(contents);
+                  });
+               });
+
+               return Promise.all([
+                  assert.strictEqual(tree.length, itemsNumber - 4, &apos;The items count is decreased&apos;),
+                  assert.isRejected(readContent, &apos;The folder is not found&apos;)
+               ]);
+            });
+      });
+   });
+
+   describe(&apos;fork()&apos;, () =&gt; {
+      let forkUsername = &apos;AurelioDeRosa&apos;;
+      let forkRepositoryName = &apos;HTML5-API-demos&apos;;
+
+      afterEach(done =&gt; {
+         let fork = github.getRepo(testUser.username, forkRepositoryName);
+
+         fork.deleteRepo(() =&gt; done());
+      });
+
+      it(&apos;should be able to fork an existent repository&apos;, () =&gt; {
+         let repositoryToFork = github.getRepo(forkUsername, forkRepositoryName);
+         let fork = repositoryToFork.fork();
+
+         return Promise.all([
+            assert.eventually.propertyVal(fork, &apos;fork&apos;, true, &apos;The repository is a fork&apos;),
+            assert.eventually.propertyVal(
+               fork,
+               &apos;full_name&apos;,
+               `${testUser.username}/${forkRepositoryName}`,
+               &apos;The fork is created in the account of the user&apos;
+            )
+         ]);
+      });
+
+      it(&apos;should throw an error if the repository to fork does not exist&apos;, () =&gt; {
+         let repositoryToFork = github.getRepo(forkUsername, &apos;non-existent-repository&apos;);
+         let fork = repositoryToFork.fork();
+
+         return assert.isRejected(fork, &apos;The fork is not created&apos;);
+      });
+   });
+});</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.4.3)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

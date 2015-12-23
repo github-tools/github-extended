@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <meta charset="UTF-8">
+      <title>GitHub Extended - Demo</title>
+      <style>
+         input[type="search"]
+         {
+            display: block;
+            margin: 1em 0;
+         }
+      </style>
+   </head>
+   <body>
+      <h1>GitHub Extended Demo</h1>
+
+      <form id="form-search">
+         <label>
+            Search a file by its name in the
+            <a href="https://github.com/AurelioDeRosa/audero">audero repository</a>:
+            <input type="search" name="query" id="query" placeholder="git" />
+         </label>
+         <input type="submit" />
+         <input type="reset" />
+      </form>
+
+      <h2>Results</h2>
+      <ul id="results-list"></ul>
+
+      <script src="github-extended.bundle.min.js"></script>
+      <script>
+         var github = new Github.default({
+            username: 'mikedeboertest',
+            password: 'test1324',
+            auth: 'basic'
+         });
+         var resultsList = document.getElementById('results-list');
+         var queryElement = document.getElementById('query');
+
+         document.getElementById('form-search').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            var repository = github.getRepo('AurelioDeRosa', 'audero');
+
+            repository.search(queryElement.value).then(function(results) {
+               resultsList.innerHTML = [].map.call(results, function(result) {
+                  return '<li>' + result.path + '</li>';
+               }).join('');
+            });
+         })
+      </script>
+   </body>
+</html>

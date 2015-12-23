@@ -1,0 +1,28 @@
+{
+  "name": "github-extended",
+  "description": "A collection of methods to extend the functionality of Github.js (known on npm as github-api)",
+  "main": "src/github-extended.js",
+  "authors": [
+     "Aurelio De Rosa <a.derosa@audero.it> (http://audero.it)"
+  ],
+  "license": "(MIT OR GPL-3.0)",
+  "keywords": [
+    "github",
+    "github-api",
+    "api",
+    "javascript",
+    "library",
+    "umd"
+  ],
+  "moduleType": [
+    "es6"
+  ],
+  "homepage": "https://github.com/AurelioDeRosa/github-extended",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

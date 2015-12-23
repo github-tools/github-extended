@@ -1,0 +1,14 @@
+{
+   "moduleId": "Github",
+   "plugins": [
+      [
+         "transform-es2015-modules-umd",
+         {
+            "browserGlobals": {
+               "github-api": "Github"
+            }
+         }
+      ]
+   ],
+   "presets": ["es2015"],
+}

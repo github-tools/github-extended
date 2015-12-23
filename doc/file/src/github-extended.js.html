@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/github-extended.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+  <script src="script/manual.js"></script>
+</head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  <a href="test.html" data-ice="testLink">Test</a>
+  <a data-ice="repoURL" href="https://github.com/AurelioDeRosa/github-extended.git" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/github-extended.js~Github.html">Github</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/github-extended.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">&apos;use strict&apos;;
+
+import GithubApi from &apos;github-api&apos;;
+
+/**
+ * The class that extends Github.js
+ *
+ * @extends GithubApi
+ */
+export
+ default class Github extends GithubApi {
+   /**
+    * @constructor
+    * @param {Object} options The object containing the information to work with the GitHub API
+    * @param {string} options.username The username used on GitHub
+    * @param {string} options.password The password of the GitHub account
+    * @param {string} options.auth The type of authentication to use. It can be either `basic` or `oauth`
+    * @param {string} options.token The token to access the GitHub API
+    */
+   constructor(options) {
+      super(options);
+
+      let superGetRepo = this.getRepo;
+      let request = this.request || this._request; // jscs:ignore disallowDanglingUnderscores
+
+      /**
+       * Returns an object representing a specific repository
+       *
+       * @param {string} user The username that possesses the repository
+       * @param {string} repo The name of the repository to work on
+       *
+       * @returns {Object}
+       */
+      this.getRepo = (user, repo) =&gt; {
+         let repository = superGetRepo(user, repo);
+         let superRemove = repository.remove;
+         let superFork = repository.fork;
+
+         function getRepositoryInfo(repository) {
+            return new Promise((resolve, reject) =&gt; {
+               repository.show((error, repo) =&gt; {
+                  if (error) {
+                     reject(error);
+                  }
+
+                  resolve(repo);
+               });
+            });
+         }
+
+         /**
+          * Searches files and folders
+          *
+          * @param {string} string The string to search
+          * @param {Object} [options={}] Possible options
+          * @param {string} [options.branch] The name of the branch in which the search must be performed
+          * @param {boolean} [options.caseSensitive=false] If the search must be case sensitive
+          * @param {boolean} [options.excludeFiles=false] If the result must exclude files
+          * @param {boolean} [options.excludeFolders=false] If the result must exclude folders
+          *
+          * @returns {Promise}
+          */
+         repository.search = (string, options = {}) =&gt; {
+            const FILE = &apos;blob&apos;;
+            const FOLDER = &apos;tree&apos;;
+
+            options = Object.assign({
+               branch: &apos;master&apos;,
+               caseSensitive: false,
+               excludeFiles: false,
+               excludeFolders: false
+            }, options);
+
+            return new Promise((resolve, reject) =&gt; {
+               repository.getSha(options.branch, &apos;&apos;, (error, sha) =&gt; {
+                  if (error) {
+                     reject(error);
+                  }
+
+                  resolve(sha);
+               });
+            })
+               .then(sha =&gt; {
+                  return new Promise((resolve, reject) =&gt; {
+                     repository.getTree(`${sha}?recursive=true`, (error, list) =&gt; {
+                        if (error) {
+                           // No matches
+                           if (error.error === 404) {
+                              resolve([]);
+                           } else {
+                              reject(error);
+                           }
+                        }
+
+                        resolve(list);
+                     });
+                  });
+               })
+               .then(list =&gt; {
+                  let regex = new RegExp(string, options.caseSensitive ? &apos;&apos; : &apos;i&apos;);
+
+                  return list.filter(content =&gt; {
+                     let fileCondition = options.excludeFiles ? content.type !== FILE : true;
+                     let folderCondition = options.excludeFolders ? content.type !== FOLDER : true;
+                     let extractName = (path) =&gt; path.substring(path.lastIndexOf(&apos;/&apos;) + 1);
+
+                     return fileCondition &amp;&amp; folderCondition &amp;&amp; regex.test(extractName(content.path));
+                  });
+               });
+         };
+
+         /**
+          * Merges a pull request
+          *
+          * @param {Object} pullRequest The pull request to merge
+          * @param {Object} [options={}] Possible options
+          * @param {string} [options.commitMessage] The commit message for the merge
+          *
+          * @returns {Promise}
+          */
+         repository.mergePullRequest = (pullRequest, options = {}) =&gt; {
+            options = Object.assign(
+               {
+                  commitMessage: `Merged pull request gh-${pullRequest.number}`
+               },
+               options
+            );
+
+            return getRepositoryInfo(repository)
+               .then(repositoryInfo =&gt; {
+                  return new Promise((resolve, reject) =&gt; {
+                     request(
+                        &apos;PUT&apos;,
+                        `/repos/${repositoryInfo.full_name}/pulls/${pullRequest.number}/merge`, // jscs:ignore
+                        {
+                           commit_message: options.commitMessage, // jscs:ignore
+                           sha: pullRequest.head.sha
+                        },
+                        (error, mergeInfo) =&gt; {
+                           if (error) {
+                              reject(error);
+                           }
+
+                           resolve(mergeInfo);
+                        }
+                     );
+                  });
+               });
+         };
+
+         /**
+          * Deletes a file or a folder and all of its content from a given branch
+          *
+          * @param {string} [branchName=&apos;master&apos;] The name of the branch in which the deletion must be performed
+          * @param {string} [path=&apos;&apos;] The path of the file or the folder to delete
+          *
+          * @returns {Promise}
+          */
+         repository.remove = (branchName = &apos;master&apos;, path = &apos;&apos;) =&gt; {
+            function removeFile(branchName, path) {
+               return new Promise((resolve, reject) =&gt; {
+                  superRemove(branchName, path, error =&gt; {
+                     if (error) {
+                        reject(error);
+                     }
+
+                     resolve();
+                  });
+               });
+            }
+
+            function removeFolder() {
+               return new Promise((resolve, reject) =&gt; {
+                  repository.getRef(`heads/${branchName}`, (error, sha) =&gt; {
+                     if (error) {
+                        reject(error);
+                     }
+
+                     resolve(sha);
+                  });
+               })
+                  .then(sha =&gt; {
+                     return new Promise((resolve, reject) =&gt; {
+                        repository.getTree(`${sha}?recursive=true`, (error, tree) =&gt; {
+                           if (error) {
+                              reject(error);
+                           }
+
+                           resolve(tree);
+                        });
+                     });
+                  })
+                  .then(tree =&gt; {
+                     let filesPromises = Promise.resolve();
+
+                     // Filters all items that aren&apos;t in the path of interest and aren&apos;t files
+                     // and delete them.
+                     tree
+                        .filter(item =&gt; item.path.indexOf(path) === 0 &amp;&amp; item.type === &apos;blob&apos;)
+                        .map(item =&gt; item.path)
+                        .forEach(path =&gt; {
+                           filesPromises = filesPromises.then(() =&gt; removeFile(branchName, path));
+                        });
+
+                     return filesPromises;
+                  });
+            }
+
+            // Remove any trailing slash from the path.
+            // GitHub does not accept it even when dealing with folders.
+            path = path.replace(/\/$/, &apos;&apos;);
+
+            let removeFilePromise = removeFile(branchName, path);
+
+            return removeFilePromise
+               .then(
+                  () =&gt; removeFilePromise,
+                  error =&gt; {
+                     // If the operation fails because the path specified is that of a folder
+                     // keep going to retrieve the files recursively
+                     if (error.error !== 422) {
+                        throw error;
+                     }
+
+                     return removeFolder();
+                  });
+         };
+
+         /**
+          * Creates a fork of the repository
+          *
+          * @returns {Promise}
+          */
+         repository.fork = () =&gt; {
+            return new Promise((resolve, reject) =&gt; {
+               superFork((err, forkInfo) =&gt; {
+                  function pollFork(fork) {
+                     fork.contents(&apos;master&apos;, &apos;&apos;, (err, contents) =&gt; {
+                        if (contents) {
+                           resolve(forkInfo);
+                        } else {
+                           setTimeout(pollFork.bind(null, fork), 250);
+                        }
+                     });
+                  }
+
+                  if (err) {
+                     reject(err);
+                  } else {
+                     pollFork(superGetRepo(options.username, repo));
+                  }
+               });
+            });
+         };
+
+         return repository;
+      };
+   }
+}</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.4.3)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
