@@ -24,8 +24,19 @@ module.exports = function(config) {
          }
       },
       coverageReporter: {
-         type : 'html',
-         dir : 'coverage/'
+         dir: 'coverage',
+         reporters: [
+            {
+               type: 'text-summary'
+            },
+            {
+               type : 'html'
+            },
+            {
+               type: 'lcovonly',
+               subdir: 'lcov'
+            }
+         ]
       },
       files: [
          'node_modules/babel-polyfill/dist/polyfill.js',
