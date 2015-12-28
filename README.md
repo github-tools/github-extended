@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/github-tools/github-extended.svg?branch=master)](https://travis-ci.org/github-tools/github-extended)
 [![Coverage Status](https://coveralls.io/repos/github-tools/github-extended/badge.svg?branch=master&service=github)](https://coveralls.io/github/github-tools/github-extended?branch=master)
 
-[GitHub Extended](https://github.com/AurelioDeRosa/github-extended) is a collection of methods to extend the 
+[GitHub Extended](https://github.com/github-tools/github-extended) is a collection of methods to extend the 
 functionality of [Github.js](https://github.com/michael/github) (known on [npm](https://www.npmjs.com) as
 [github-api](https://www.npmjs.com/package/github-api)).
 
@@ -12,7 +12,7 @@ functionality of [Github.js](https://github.com/michael/github) (known on [npm](
 
 Being an extension for Github.js, the only requirement is to install and include
 [Github.js](https://github.com/michael/github) before
-[GitHub Extended](https://github.com/AurelioDeRosa/github-extended).
+[GitHub Extended](https://github.com/github-tools/github-extended).
 
 ## Installation
 
@@ -52,7 +52,7 @@ Creates a fork of the repository
 
 ## License
 
-[GitHub Extended](https://github.com/AurelioDeRosa/github-extended) is dual licensed under
+[GitHub Extended](https://github.com/github-tools/github-extended) is dual licensed under
 [MIT](http://www.opensource.org/licenses/MIT) and [GPL-3.0](http://opensource.org/licenses/GPL-3.0).
 
 ## Author
