@@ -26,7 +26,10 @@ describe('Github', () => {
                reject(error);
             }
 
-            resolve();
+            // Fixes an issue when writing multiple files in succession.
+            // This issue only happens in Travis CI.
+            // (http://stackoverflow.com/questions/19576601/github-api-issue-with-file-upload#comment29076073_19576601)
+            setTimeout(resolve, 500);
          });
       });
    }
