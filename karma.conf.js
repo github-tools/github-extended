@@ -54,7 +54,8 @@ module.exports = function(config) {
       },
       reporters: [
          'mocha',
-         'coverage'
+         'coverage',
+         'coveralls'
       ],
       reportSlowerThan: 800,
       singleRun: true
