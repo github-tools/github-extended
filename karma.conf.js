@@ -1,12 +1,17 @@
 'use strict';
 
+var browserifyIstanbul = require('browserify-istanbul');
+var isparta = require('isparta');
+
 module.exports = function(config) {
    config.set({
       browserify: {
          debug: true,
          transform: [
             'babelify',
-            'browserify-istanbul'
+            browserifyIstanbul({
+               istrumenter: isparta
+            })
          ]
       },
       browsers: ['PhantomJS'],
