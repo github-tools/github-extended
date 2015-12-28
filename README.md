@@ -1,7 +1,7 @@
 # GitHub Extended
 
-[![Code Climate](https://codeclimate.com/github/AurelioDeRosa/github-extended/badges/gpa.svg)](https://codeclimate.com/github/AurelioDeRosa/github-extended)
-[![Build Status](https://travis-ci.org/AurelioDeRosa/github-extended.svg?branch=master)](https://travis-ci.org/AurelioDeRosa/github-extended)
+[![Code Climate](https://codeclimate.com/github/github-tools/github-extended/badges/gpa.svg)](https://codeclimate.com/github/github-tools/github-extended)
+[![Build Status](https://travis-ci.org/github-tools/github-extended.svg?branch=master)](https://travis-ci.org/github-tools/github-extended)
 [![Coverage Status](https://coveralls.io/repos/AurelioDeRosa/github-extended/badge.svg?branch=master)](https://coveralls.io/github/AurelioDeRosa/github-extended?branch=master)
 
 [GitHub Extended](https://github.com/AurelioDeRosa/github-extended) is a collection of methods to extend the 
