@@ -7,6 +7,18 @@ import testUser from '../fixtures/user.json';
 describe('Github', () => {
    let github, repository, testRepositoryName;
 
+   /**
+    * Creates or update a file
+    *
+    * @param {Object} data The data to create or update the file
+    * @param {string} data.repository The repository to work with
+    * @param {string} data.branch The branch in which the file has to be created or updated
+    * @param {string} data.filename The full path of the file
+    * @param {string} data.content The content of the file
+    * @param {string} data.commitMessage The commit message to use
+    *
+    * @returns {Promise}
+    */
    function promisifiedWrite(data) {
       return new Promise((resolve, reject) => {
          data.repository.write(data.branch, data.filename, data.content, data.commitMessage, error => {
