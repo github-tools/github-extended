@@ -444,8 +444,8 @@ describe('Github', () => {
    });
 
    describe('fork()', () => {
-      let forkUsername = 'AurelioDeRosa';
-      let forkRepositoryName = 'HTML5-API-demos';
+      let forkUsername = 'jquery';
+      let forkRepositoryName = 'irc.jquery.org';
 
       afterEach(done => {
          let fork = github.getRepo(testUser.username, forkRepositoryName);
